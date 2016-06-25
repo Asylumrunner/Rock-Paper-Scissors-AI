@@ -3,28 +3,80 @@ import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Random;
 import java.util.Scanner;
 
 class rpsAI {
-	float[][] markovChain; // used to store markov chain probabilities
-	int[] timesPlayed; // contains the number of times the player has played each of the three moves. For calculation purposes.
+	private float[][] markovChain; // used to store markov chain probabilities
+	private int[] timesPlayed; // contains the number of times the player has played each of the three moves. For calculation purposes.
 	
-	int lastMove; //last move of the human player
-	int moveBeforeLast; //move before last of the human player
+	private int lastMove; //last move of the human player
+	private int moveBeforeLast; //move before last of the human player
 	
 	rpsAI(){//constructor for the AI class
-		//PROBLEM/TODO: Not 100% sure how to initialize the Markov chain. Should probably just make all possible transitions even probability?
+		markovChain = new float[][] {{0.33f, 0.33f, 0.33f}, {0.33f, 0.33f, 0.33f}, {0.33f, 0.33f, 0.33f}};//Didn't really see a need to do this via a loop when a simple assign statement would do
+		timesPlayed = new int[] {0, 0, 0};
 	}
 	
-	String makeMove(){//main function for the class, probabilistically guesses the player's next move, then counters it
-		return "rock";//TODO: Actually do that, and don't just return rock all the time (i.e, "The Adam Strategy")
+	public String makeMove(){//main function for the class, probabilistically guesses the player's next move, then counters it
+		Random rand = new Random();//establish a random number generator
+		float ranFloat = rand.nextFloat();//generate a random float
+		if(ranFloat <= markovChain[lastMove][1]){//use that random float, along with our Markov Chain values of potential moves, to generate a probabilisically determined move
+			return "paper";//Note that the returned moves are, in fact, the counters to the move the AI predicts the user to perform
+		}
+		else if (ranFloat <= markovChain[lastMove][2] + markovChain[lastMove][1]){//We add these two values together here to properly model the possibility space
+			return "scissors";
+		}
+		else{
+			return "rock";
+		}
 	}
 	
-	void update(String newMove){//Takes in the results of the last game played, and uses them to update the Markov chain using relevant data
-		//TODO: This
+	public void update(String newMove){//Takes in the results of the last game played, and uses them to update the Markov chain using relevant data
+		moveBeforeLast = lastMove;
+		if(newMove.equals("rock")){
+			lastMove = 0;
+		}
+		else if(newMove.equals("paper")){
+			lastMove = 1;
+		}
+		else{
+			lastMove = 2;
+		}
+		
+		//Here comes the hard part: updating the Markov Chain
+		/*
+		 * 1. Multiply everything in the appropriate column of the Markov Chain by timesPlayed[moveBeforeLast]
+		 * 2. Increment the row value we want (that is, markovChain[moveBeforeLast][lastMove] by one
+		 * 3. Increment timesPlayed[moveBeforeLast] by one
+		 * 4. Divide all values in markovChain[moveBeforeLast][x] by timesPlayed[moveBeforeLast]
+		 */
+		
+		for(int i = 0; i < 3; i++){ //1. Multiply everything in the appropriate column of the Markov Chain by timesPlayed[moveBeforeLast]
+			markovChain[moveBeforeLast][i] *= timesPlayed[moveBeforeLast];
+		}
+		
+		//2. Increment the row value we want (that is, markovChain[moveBeforeLast][lastMove] by one 
+		markovChain[moveBeforeLast][lastMove] += 1;
+		
+		//3. Increment timesPlayed[moveBeforeLast] by one
+		timesPlayed[moveBeforeLast]++;
+		
+		//4. Divide all values in markovChain[moveBeforeLast][x] by timesPlayed[moveBeforeLast]
+		for(int j = 0; j < 3; j++){
+			markovChain[moveBeforeLast][j] /= timesPlayed[moveBeforeLast];
+		}
+		
+		//For debug purposes, let's go ahead and print the contents of this Markov Chain:
+		System.out.println("New Markov Chain");
+		System.out.println("Rock to Rock: " + markovChain[0][0] + " Rock to Paper: " + markovChain[0][1] + " Rock to Scissors: " + markovChain[0][2]);
+		System.out.println("Paper to Rock: " + markovChain[1][0] + " Paper to Paper: " + markovChain[1][1] + " Paper to Scissors: " + markovChain[1][2]);
+		System.out.println("Scissors to Rock: " + markovChain[2][0] + " Scissors to Paper: " + markovChain[2][1] + " Scissors to Scissors: " + markovChain[2][2]);
+		
+		
 	}
 	
-	void saveData(Scanner keyboard){//Function which saves the Markov chain developed by the AI to a text file for later use
+	public void saveData(Scanner keyboard){//Function which saves the Markov chain developed by the AI to a text file for later use
 		System.out.print("Enter the name of the file: ");
 		String filename = keyboard.nextLine();//User inputs their desired name for the file
 		
@@ -51,7 +103,25 @@ class rpsAI {
 		
 	}
 	
-	void setChain(int x, int y, float probability){//simple setter routine, used to generate a Markov Chain from a file
+	public void loadData(Scanner keyboard){//A function which reads in a file and reconstructs the described Markov Chain 
+		System.out.print("Please enter the name of the file, including file extension:");
+		String file = keyboard.nextLine();//User enters in the name of the data file
+		try {
+			Scanner input = new Scanner(new File(file));//A scanner is then opened to read in the data
+			for(int i = 0; i < 3; i++){//Use the setter for the RPSAI to construct the old Markov Chain
+				for(int j = 0; j < 3; j++){
+					this.setChain(i, j, input.nextFloat());
+				}
+			}//TODO: Also read in and rebuild the timesPlayed array
+			
+			input.close();
+		} 
+		catch (FileNotFoundException e) {//if we can't find the file the user's talking about, let 'em know, and exit the function
+			System.out.println("That file was not found.");
+		}
+	}
+	
+	private void setChain(int x, int y, float probability){//simple setter routine, used to generate a Markov Chain from a file
 		markovChain[x][y] = probability;
 	}
 }
@@ -80,7 +150,7 @@ public class game {
 			switch(choice) {//Now that we've verified input, this switch sends the user to the proper function given their request.
 				case 1: play(keyboard, opponent);
 					break;
-				case 2: loadData(keyboard, opponent);
+				case 2: opponent.loadData(keyboard);
 					break;
 				case 3: wannaQuit = true;//Except case 3, of course, which simply breaks the do-while loop
 					break;
@@ -92,23 +162,7 @@ public class game {
 		
 	}
 	
-	static void loadData(Scanner keyboard, rpsAI opponent){//A function which reads in a file and reconstructs the described Markov Chain TODO: Move this to the AI class
-		System.out.print("Please enter the name of the file, including file extension:");
-		String file = keyboard.nextLine();//User enters in the name of the data file
-		try {
-			Scanner input = new Scanner(new File(file));//A scanner is then opened to read in the data
-			for(int i = 0; i < 3; i++){//Use the setter for the RPSAI to construct the old Markov Chain
-				for(int j = 0; j < 3; j++){
-					opponent.setChain(i, j, input.nextFloat());
-				}
-			}//TODO: Also read in and rebuild the timesPlayed array
-			
-			input.close();
-		} 
-		catch (FileNotFoundException e) {//if we can't find the file the user's talking about, let 'em know, and exit the function
-			System.out.println("That file was not found.");
-		}
-	}
+
 	
 	static void play(Scanner keyboard, rpsAI opponent){//play() forms the core gameplay loop of the game
 		System.out.println("Let's play Rock, Paper, Scissors!");
@@ -156,6 +210,21 @@ public class game {
 				case 1://Case 1 simply has them traverse this do-while loop again
 					break;
 				case 2: opponent.saveData(keyboard); //Case 2 tells the opponent to begin the process of saving it's knowledge to a file
+					
+					System.out.println("Do you wanna keep playing?:");
+					System.out.println("1. Yes");
+					System.out.println("2. No");
+					
+					choice = Integer.parseInt(keyboard.nextLine())
+					while(choice != 1 && choice != 2){
+						System.out.println("Invalid entry.");
+						System.out.print("Please enter a valid choice: ");
+						keyboard.nextLine();
+						choice = Integer.parseInt(keyboard.nextLine());
+					}
+					if(choice == 2){
+						playing = false;
+					}
 					break;
 				case 3: playing = false; //And Case 3 breaks this do-while loop, allowing the user to return to the main menu
 					break;
