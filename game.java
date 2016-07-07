@@ -93,7 +93,12 @@ class rpsAI {
 					output.print(markovChain[i][j]);
 					output.print(" ");
 				}
-			}//TODO: This should probably print timesPlayed to a file as well
+			}
+			
+			for(int k = 0; k < 3; k++){//and we also print the contents of timesPlayed to it as well, so our future loaded AI can properly update its inherited Markov Chain
+				output.print(timesPlayed[k]);
+				output.print(" ");
+			}
 			output.close();
 		} 
 		catch (FileNotFoundException e) {//I don't think this will ever trigger, but in case it does, this exception is caught
@@ -112,7 +117,11 @@ class rpsAI {
 				for(int j = 0; j < 3; j++){
 					this.setChain(i, j, input.nextFloat());
 				}
-			}//TODO: Also read in and rebuild the timesPlayed array
+			}
+			
+			for(int k = 0; k < 3; k++){//and also reconstruct our old timesPlayed array
+				this.setTimesPlayed(k, input.nextInt());
+			}
 			
 			input.close();
 		} 
@@ -123,6 +132,10 @@ class rpsAI {
 	
 	private void setChain(int x, int y, float probability){//simple setter routine, used to generate a Markov Chain from a file
 		markovChain[x][y] = probability;
+	}
+	
+	private void setTimesPlayed(int x, int y){
+		timesPlayed[x] = y;
 	}
 }
 
