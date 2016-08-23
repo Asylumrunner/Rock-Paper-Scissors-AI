@@ -228,7 +228,7 @@ public class game {
 					System.out.println("1. Yes");
 					System.out.println("2. No");
 					
-					choice = Integer.parseInt(keyboard.nextLine())
+					choice = Integer.parseInt(keyboard.nextLine());
 					while(choice != 1 && choice != 2){
 						System.out.println("Invalid entry.");
 						System.out.print("Please enter a valid choice: ");
